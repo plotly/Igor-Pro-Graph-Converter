@@ -1,0 +1,23 @@
+#!/usr/bin/python3
+# create a html file from a json input via plotly offline.
+
+from os import path
+import argparse
+import plotly.graph_objs as go
+import plotly.offline as py
+import json
+
+parser = argparse.ArgumentParser(description='Process a JSON file with plot.ly and produce html output.')
+parser.add_argument('inputfile', metavar='fileName.json', type=str,
+                   help='specify the input JSON file.')
+parser.add_argument('--output', dest='outputfile',
+                   help='specify the output file (default: fileName.html)')
+args = parser.parse_args()
+
+if args.outputfile == None:
+    args.outputfile = path.splitext(args.inputfile)[0] + '.html'
+
+with open(args.inputfile) as json_file:
+        graph = json.load(json_file)
+
+py.plot(graph, filename=args.outputfile, auto_open=False)

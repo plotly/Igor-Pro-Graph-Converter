@@ -22,18 +22,28 @@ Publish your Igor Pro graphs to online Plotly graphs with 1-click!
 
 Create some data and a simple graph
 
-```
-make/N=10 testData={4,2,4,6,4,1,6,1,3,0}
-display testData
+```igorpro
+Make/N=10 testData={4,2,4,6,4,1,6,1,3,0}
+Display testData
 ```
 
 Now send the data to plotly by either pressing ctrl-1, or executing the 
 command:
 
-```
-Graph2plotly()
+```igorpro
+Graph2Plotly()
 ```
 
 This writes a JSON string with the name of the current Experiment Name to the path where 
 the Experiment is located.
+
+You can also specify the exact window and the target file using the optional parameters
+as follows:
+
+```igorpro
+Graph2Plotly(graph = "Graph0", output = "plotly.json")
+```
+
+There is a tiny python script in `bin/` that allows conversion to offline html.
+
 

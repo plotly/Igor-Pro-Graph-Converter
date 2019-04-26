@@ -2749,29 +2749,26 @@ End
 /// @brief Main entry point
 ///
 /// @param graph         [optional] default: Use the top graph
-/// @param plotlyGraph   [optional] default: value of graph
-/// @param PlotlyFolder  [optional] default: Use the name of the experiment.
+/// @param output        [optional] default: Use the name of the experiment.
 /// @param skipSend      [optional] defaull: 1 (Do not send the graph to plot.ly)
-/// @param KeepCMD       [optional] default: 1 (Keep the CMD output notebook)
-Function Graph2Plotly([graph, plotlyGraph, plotlyFolder, skipSend, keepCMD])
-	string graph, PlotlyGraph, PlotlyFolder
-	variable skipSend
+/// @param KeepCMD       [optional] default: 0 (Do not keep the CMD output notebook)
+/// @param writeFile     [optional] default: 1 (Write output to a json file in home)
+Function Graph2Plotly([graph, output, keepCMD, writeFile])
+	string graph, output
 	variable KeepCMD
+	variable writeFile
 
-	if(ParamIsDefault(PlotlyFolder) )
-		PlotlyFolder = IgorInfo(1)
-	endif
-	if(ParamIsDefault(skipSend))
-		skipsend=1
+	if(ParamIsDefault(output) )
+		output = IgorInfo(1) + ".json"
 	endif
 	if(ParamIsDefault(KeepCMD))
-		KeepCMD = 1
+		KeepCMD = 0
 	endif
 	if(ParamIsDefault(graph))
 		graph = WinName(0, 1)
 	endif
-	if(ParamIsDefault(PlotlyGraph))
-		PlotlyGraph = graph
+	if(ParamIsDefault(writeFile))
+		writeFile = 1
 	endif
 
 	DoWindow $graph
@@ -2817,16 +2814,6 @@ Function Graph2Plotly([graph, plotlyGraph, plotlyFolder, skipSend, keepCMD])
 	NVAR barGap = root:Packages:Plotly:barGap
 	SVAR barToMode = root:packages:Plotly:BarToMode
 	NVAR TraceOrderFlag = root:packages:Plotly:TraceOrderFlag
-
-	if(!skipsend)
-		SVAR/Z user = root:packages:Plotly:UserName
-		SVAR/Z key = root:packages:Plotly:UserKey
-		if(!SVAR_Exists(user) || !SVAR_Exists(key))
-			print "Please use PlotlySetUser(user=\"UserName\", key=\"xxxxxxxxxx\") to set User and/or Key"
-			print "Run again using Graph2Plotly(skipsend = 1)"
-			return -1
-		endif
-	endif
 
 	string list
 
@@ -2885,27 +2872,10 @@ Function Graph2Plotly([graph, plotlyGraph, plotlyFolder, skipSend, keepCMD])
 		DoWindow/K $plyName
 	endif
 	NewNoteBook/N=$plyName/F=0
-
-	string Plyun = ""
-	string Plykey = ""
-	if(!skipsend)
-		if(StringMatch(user, ""))
-			print "Please use PlotlySetUser([user=\"UserName\", key=\"xxxxxxxxxx\"]) to set User and/or Key"
-			return -1
-		endif
-		if(StringMatch(key, ""))
-			print "Please use PlotlySetUser([user=\"UserName\", key=\"xxxxxxxxxx\"]) to set User and/or Key"
-			return -1
-		endif
-		Plyun = "un=" + user + "&\r"
-		Plykey = "key=" + key + "&\r"
-	endif
-	string platform = "platform=Igor&\r"
-	Notebook $plyName text=(Plyun + Plykey + platform)
-	oPlystring(plyName, "origin=plot&\r") // assume it is a graph
+	oPlystring(plyName, "{")
 
 	// DATA
-	oPlystring(plyName, "args=[\r")
+	oPlystring(plyName, "\"data\": [\r")
 	variable index = 0
 	string traceName
 	string obj = ""
@@ -2979,15 +2949,10 @@ Function Graph2Plotly([graph, plotlyGraph, plotlyFolder, skipSend, keepCMD])
 		oPlystring(plyName, obj)
 	endif
 
-	oPlystring(plyName, "\r]&\r")
+	oPlystring(plyName, "\r],\r")
 
 	// LAYOUT
-	if(StringMatch(PlotlyFolder, "") )
-		obj = "kwargs={\r\"filename\":\"" + PlotlyGraph + "\",\r\"fileopt\":\"overwrite\",\r"
-	else
-		obj = "kwargs={\r\"filename\":\"" + PlotlyFolder + "/" + PlotlyGraph + "\",\r\"fileopt\":\"overwrite\",\r"
-	endif
-	obj += "\"layout\" : {\r"
+	obj = "\"layout\" : {\r"
 
 	// Set up the graph margins
 	GetWindow $graph, psizeDC
@@ -3162,14 +3127,13 @@ Function Graph2Plotly([graph, plotlyGraph, plotlyFolder, skipSend, keepCMD])
 	obj = obj[0, strlen(obj) - 3]
 	obj += "\r},\r" // End of Layout
 	obj = obj[0, strlen(obj) - 3]
-	obj += "\r}" // End of KWARGS
 	oPlystring(plyName, obj)
 
-	if(!skipsend) // Send the data to Plotly unless asked not to
+	oPlystring(plyName, "}") // end of main object
+
+	if(writeFile)
 		Notebook $plyName getData=2
-		string S_Post = Strip (S_Value)
-		easyHTTP /Post=S_Post "http://plot.ly/clientresp"
-		print S_GetHTTP
+		WriteOutput(S_Value, output)
 	endif
 
 	if(!keepCMD)
@@ -3233,32 +3197,6 @@ static Function/s Strip(str)
 	return ReplaceString("\r", str, "")
 End
 
-function/s CMD2Plotly(nb)
-	string nb
-
-	string post
-
-	Notebook $nb getData=2
-	post = Strip(S_Value)
-	easyHTTP/Post=post "http://plot.ly/clientresp"
-
-	print S_GetHTTP // @todo remove debug output
-	return S_GetHTTP
-End
-
-static Function/S pplot([origin, filename, fileopt])
-	string origin
-	string filename
-	string fileopt
-
-	string un = "fillinuser" // @todo fill with data
-	string key = "fillinkey"
-	string platform = "Igor"
-	string kwArgs = "\""
-
-	return un + "&" + key + "&" + origin + "&" + platform + "&"
-End
-
 static Function ExtractRGB(rgbR, rgbG, rgbB, key, graph)
 	variable &rgbR, &rgbG, &rgbB
 	string key
@@ -3274,5 +3212,21 @@ static Function ExtractRGB(rgbR, rgbG, rgbB, key, graph)
 		return 0
 	else
 		print "return", index, strsearch(window_macro, "\r", index)
+	endif
+End
+
+/// Writes string str to filename
+Function WriteOutput(str, filename)
+	string str, filename
+
+	variable refNum
+
+	Open/Z/P=home refNum as filename
+	if(!V_flag)
+		FBinWrite refNum, str
+		Close refNum
+	else
+		PathInfo home
+		printf "Error: Could not write to output file at %s\r", S_path + filename
 	endif
 End

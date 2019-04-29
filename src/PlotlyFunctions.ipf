@@ -3016,7 +3016,7 @@ Function Graph2Plotly([graph, output, keepCMD, writeFile])
 			break // no more axes
 		endif
 		if(index > 0)
-			PlyAxName = "xaxis", dub2str(index + 1)
+			PlyAxName = "xaxis" + dub2str(index + 1)
 		else
 			PlyAxName = "xaxis"
 		endif
@@ -3032,7 +3032,7 @@ Function Graph2Plotly([graph, output, keepCMD, writeFile])
 			break // no more axes
 		endif
 		if(index > 0)
-			PlyAxName = "yaxis", dub2str(index + 1)
+			PlyAxName = "yaxis" + dub2str(index + 1)
 		else
 			PlyAxName = "yaxis"
 		endif

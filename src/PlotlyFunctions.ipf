@@ -1964,6 +1964,7 @@ static Function/T createAxisObj(axisName, PlyAxisName, graph, Orient, AxisNum)
 				cma = strsearch(info, ",", freeindex + 11)
 				curly = strsearch(info, "}", cma)
 				AnchorData = str2num(info[FreeIndex + 12, cma - 1])
+				AnchorData = numtype(Anchordata) == 0 ? AnchorData : 0
 				AnchorAx = info[cma + 1, curly - 1]
 				if(StringMatch(anchorAx, "kwFraction") ) // This is a fraction of the graph area...Plotly native!
 					obj += "\"anchor\":\"free\",\r"
@@ -1987,6 +1988,7 @@ static Function/T createAxisObj(axisName, PlyAxisName, graph, Orient, AxisNum)
 				pxSize = V_bottom - V_top // The POINT size of the plot area
 				cma = strsearch(info, ";", freeIndex + 11) // Actually a semicolon...
 				AnchorData = str2num(info[FreeIndex + 11, cma - 1]) // Read the position of the axis supposedly in points from the bottom axis
+				AnchorData = numtype(AnchorData) == 0 ? AnchorData : 0
 				FreeFrac = -(AnchorData/PxSize)
 				obj +="\"anchor\":\"free\",\r"
 				if(RorT) // Have to go from the other margin if Right or Top
@@ -2010,6 +2012,7 @@ static Function/T createAxisObj(axisName, PlyAxisName, graph, Orient, AxisNum)
 				cma = strsearch(info, ",", freeindex + 11)
 				curly = strsearch(info, "}", cma)
 				AnchorData = str2num(info[FreeIndex + 12, cma - 1])
+				AnchorData = numtype(AnchorData) == 0 ? AnchorData : 0
 				AnchorAx = info[cma + 1, curly - 1]
 				if(StringMatch(anchorAx, "kwFraction") ) // This is a fraction of the graph area...Plotly native!
 					obj += "\"anchor\":\"free\",\r"
@@ -2031,6 +2034,7 @@ static Function/T createAxisObj(axisName, PlyAxisName, graph, Orient, AxisNum)
 				pxSize = V_right - V_left // The POINT size of the plot area
 				cma = strsearch(info, ";", freeIndex, 11) // Actually a semicolon...
 				AnchorData = str2num(info[FreeIndex + 11, cma - 1]) // Read the position of the axis supposedly in points from the bottom axis
+				AnchorData = numtype(Anchordata) == 0 ? AnchorData : 0
 				FreeFrac = -(AnchorData/PxSize)
 				obj += "\"anchor\":\"free\",\r"
 				if(RorT) // Have to go from the other margin if Right or Top

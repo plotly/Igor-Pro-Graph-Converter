@@ -1565,10 +1565,9 @@ static Function/T CreateTrObj(traceName, graph)
 	// Get the main color information for this trace.
 	string RGB_Array=""		// We'll store data here if a color array is needed
 	int rgbR, rgbG, rgbB
-	rgbR = round(GetNumFromModifyStr(info, "rgb", "(", 0)/257)
-	rgbG = round(GetNumFromModifyStr(info, "rgb", "(", 1)/257)
-	rgbB = round(GetNumFromModifyStr(info, "rgb", "(", 2)/257)
-	string TraceRGB = "\"rgb(" + dub2str(rgbR) + "," + dub2str(rgbG) + "," + dub2str(rgbB) + ")\""
+	variable rgbA
+	GetRGBAfromInfo(info, "rgb", rgbR, rgbG, rgbB, rgbA)
+	string TraceRGB = "\"rgba(" + dub2str(rgbR) + "," + dub2str(rgbG) + "," + dub2str(rgbB) +  "," + dub2str(rgbA) + ")\""
 	variable hbFill = GetNumFromModifyStr(info, "hbFill", "", 0)
 	variable FillA = 1
 	if(hbFill == 0)
@@ -1600,27 +1599,29 @@ static Function/T CreateTrObj(traceName, graph)
 
 	// Do things specific to category bar mode.
 	if(strsearch(plyMode, "bar", 0) > -1) // Bar mode
+		int barStrkR, barStrkG, barStrkB
+		variable barStrkA
+		string barStrkRGB = ""
 		variable UseBarStroke = GetNumFromModifyStr(info, "useBarStrokeRGB", "", 0)
 		if(UseBarStroke)
-			variable BarStrkR = round(GetNumFromModifyStr(info, "barStrokeRGB", "(", 0) / 257)
-			variable BarStrkG = round(GetNumFromModifyStr(info, "barStrokeRGB", "(", 1) / 257)
-			variable BarStrkB = round(GetNumFromModifyStr(info, "barStrokeRGB", "(", 2) / 257)
-			string BarStrkRGB = "\"rgb(" + dub2str(BarStrkR) + "," + dub2str(BarStrkG) + "," + dub2str(BarStrkB) + ")\""
+			GetRGBAfromInfo(info, "barStrokeRGB", barStrkR, barStrkG, barStrkB, barStrkA)
+			BarStrkRGB = "\"rgba(" + dub2str(barStrkR) + "," + dub2str(barStrkG) + "," + dub2str(barStrkB) + "," + dub2str(barStrkA) + ")\""
 		elseif(useZcolor)
 			BarStrkRGB = RGB_Array
 		else
-			BarStrkRGB = "\"rgb(" + dub2str(rgbR) + "," + dub2str(rgbG) + "," + dub2str(rgbB) + ")\""
+			BarStrkRGB = "\"rgba(" + dub2str(rgbR) + "," + dub2str(rgbG) + "," + dub2str(rgbB) + "," + dub2str(rgbA) + ")\""
 		endif
+		int barR, barG, barB
+		variable barA
+		string barRGB
 		variable UsePlusRGB = GetNumFromModifyStr(info, "usePlusRGB", "", 0)
-		if(UsePlusRGB) // These colors have the possiblity of transparency, based on hbFill, set above
-			variable BarR = round(GetNumFromModifyStr(info, "plusRGB", "(", 0) / 257)
-			variable BarG = round(GetNumFromModifyStr(info, "plusRGB", "(", 1) / 257)
-			variable BarB = round(GetNumFromModifyStr(info, "plusRGB", "(", 2) / 257)
-			string BarRGB = "\"rgba(" + dub2str(barR) + "," + dub2str(BarG) + "," + dub2str(BarB) + "," + dub2str(FillA) + ")\""
+		if(UsePlusRGB)
+			GetRGBAfromInfo(info, "barStrokeRGB", barR, barG, barB, barA)
+			barRGB = "\"rgba(" + dub2str(barR) + "," + dub2str(BarG) + "," + dub2str(BarB) + "," + dub2str(barA) + ")\""
 		elseif(useZcolor)
 			BarRGB = zColorArray(Colorinfo, plyMode, transp=FillA)
 		else
-			BarRGB = "\"rgba(" + dub2str(rgbR) + "," + dub2str(rgbG) + "," + dub2str(rgbB) + "," + dub2str(FillA) + ")\""
+			BarRGB = "\"rgba(" + dub2str(rgbR) + "," + dub2str(rgbG) + "," + dub2str(rgbB) + "," + dub2str(rgbA) + ")\""
 		endif
 		obj += "\"marker\":{\r"
 		obj += "\"color\":" + BarRGB + ",\r"
@@ -1649,6 +1650,7 @@ static Function/T CreateTrObj(traceName, graph)
 	// Fill information for Fill to Zero
 	if(mode == 7 || mode == 6)
 			int PlusrgbR, plusrgbG, plusrgbB
+			variable plusrgbA
 			if(tomode == 1) // Fill to next, but in Plotly it's fill to last so reverst the ordering
 				TraceOrderFlag=1
 				obj += "\"fill\":\"tonexty\",\r"
@@ -1656,15 +1658,14 @@ static Function/T CreateTrObj(traceName, graph)
 				obj += "\"fill\":\"tozeroy\",\r"
 			endif
 			if(GetNumFromModifyStr(info, "usePlusRGB", "", 0))
-				PlusrgbR = round(GetNumFromModifyStr(info, "plusRGB", "(", 0) / 257)
-				PlusrgbG = round(GetNumFromModifyStr(info, "plusRGB", "(", 1) / 257)
-				PlusrgbB = round(GetNumFromModifyStr(info, "plusRGB", "(", 2) / 257)
+				GetRGBAfromInfo(info, "plusRGB", plusrgbR, plusrgbG, plusrgbB, plusrgbA)
 			else
 				PlusrgbR = rgbR
 				PlusrgbG = rgbG
 				PlusrgbB = rgbB
+				plusrgbA = rgbA
 			endif
-			obj += "\"fillcolor\":\"rgba(" + dub2str(PlusrgbR) + "," + dub2str(PlusrgbG) + "," + dub2str(PlusrgbB) + "," + dub2str(FillA) + ")\",\r"
+			obj += "\"fillcolor\":\"rgba(" + dub2str(PlusrgbR) + "," + dub2str(PlusrgbG) + "," + dub2str(PlusrgbB) + "," + dub2str(plusrgbA) + ")\",\r"
 	endif
 	// End of Fill to Zero information
 
@@ -3456,4 +3457,24 @@ Function/WAVE DuplicateFromRange(wv, range)
 	endif
 
 	return temp
+End
+
+Function GetRGBAfromInfo(info, key, rgbR, rgbG, rgbB, rgbA)
+	String info, key
+	int &rgbR, &rgbG, &rgbB
+	Variable &rgbA
+
+	String recreation, rgbaString
+
+	recreation = WMGetRECREATIONFromInfo(info)
+	rgbaString = StringByKey(key + "(x)", recreation, "=", ";", 1)
+	rgbaString = rgbaString[1, strlen(rgbaString) - 2] // remove ()
+	rgbR = str2num(StringFromList(0, rgbaString, ",")) / 257
+	rgbG = str2num(StringFromList(1, rgbaString, ",")) / 257
+	rgbB = str2num(StringFromList(2, rgbaString, ",")) / 257
+	if(ItemsInList(rgbaString, ",") == 4)
+		rgbA = round(str2num(StringFromList(3, rgbaString, ",")) / 65535 * 10) / 10
+	else
+		rgbA = 1
+	endif
 End

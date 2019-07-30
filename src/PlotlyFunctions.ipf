@@ -799,7 +799,6 @@ static Constant COLOR_MODE_EXPLICIT = 5
 
 /// @brief create a plotly colorscale object
 ///
-/// @todo use plotly color table equivivalents Greys,YlGnBu,Greens,YlOrRd,Bluered,RdBu,Reds,Blues,Picnic,Rainbow,Portland,Jet,Hot,Blackbody,Earth,Electric,Viridis,Cividis.
 /// @todo handle logarithmic parameter
 /// @todo support alpha channel rgbA
 static Function/T CreateColorTab(info, zwave, color_mode)
@@ -814,6 +813,8 @@ static Function/T CreateColorTab(info, zwave, color_mode)
 	variable discrete = 0
 	variable reverseMode = 0
 	string out = ""
+	string plotlymap = "_none_"
+
 
 	switch(color_mode)
 		case COLOR_MODE_CTABLE:
@@ -823,15 +824,66 @@ static Function/T CreateColorTab(info, zwave, color_mode)
 			ctName = StringFromList(2, info, ",")
 			reverseMode = str2num(StringFromList(3, info, ","))
 			if(WhichListItem(ctName, Ctablist()) != -1)
-				ColorTab2Wave $ctName // Makes a Nx43 matrix for RGB name M_colors
-				WAVE/U/W M_colors
-				Duplicate/U/W/FREE M_colors ColorTabWave
-				discrete = DiscreteColorTable(ctName)
+				strswitch(ctName)
+					/// @todo missing plotly color table equivivalents for
+					/// YlGnBu YlOrRd Picnic Portland Jet Viridis Cividis
+					case "YellowHot256":
+					case "YellowHot":
+						plotlymap = "Hot"
+						break
+					case "Rainbow16":
+						discrete = 1
+					case "Rainbow256":
+					case "Rainbow":
+						plotlymap = "Rainbow"
+						break
+					case "Grays16":
+						discrete = 1
+					case "Grays256":
+					case "Grays":
+						plotlymap = "Greys"
+						break
+					case "BlueBlackRed":
+						plotlymap = "Bluered"
+						break
+					case "Red":
+						plotlymap = "Reds"
+						break
+					case "Green":
+						plotlymap = "Greens"
+						break
+					case "Blue":
+						plotlymap = "Blues"
+						break
+					case "RedWhiteBlue":
+						plotlymap = "RdBu"
+						break
+					case "BlueHot256":
+					case "BlueHot":
+						plotlymap = "Blackbody"
+						break
+					case "Terrain256":
+					case "Terrain":
+						plotlymap = "Earth"
+						break
+					case "Mocha":
+					case "VioletOrangeYellow":
+						plotlymap = "Electric"
+						break
+					default:
+						ColorTab2Wave $ctName // Makes a Nx43 matrix for RGB name M_colors
+						WAVE/U/W M_colors
+						Duplicate/U/W/FREE M_colors ColorTabWave
+						discrete = DiscreteColorTable(ctName)
+						numColors = DimSize(ColorTabWave, 0)
+						Make/N=(numColors)/FREE ColorMappings = p / (numColors - 1)
+						break
+				endswitch
 			else
 				Duplicate/U/W/FREE $ctName ColorTabWave
+				numColors = DimSize(ColorTabWave, 0)
+				Make/N=(numColors)/FREE ColorMappings = p / (numColors - 1)
 			endif
-			numColors = DimSize(ColorTabWave, 0)
-			Make/N=(numColors)/FREE ColorMappings = p / (numColors - 1)
 			break
 		case COLOR_MODE_CINDEX:
 			// cindex=matrixWave
@@ -883,44 +935,52 @@ static Function/T CreateColorTab(info, zwave, color_mode)
 			zMax = V_max
 			colorMappings -= zMin
 			colorMappings /= zMax
+			colorMappings[] = max(min(colorMappings[p], 1), 0)
 			break
 		default:
 			Abort "unsupported color mode"
 	endswitch
 
-	if(DimSize(ColorMappings, 0) != DimSize(ColorTabWave, 0))
-		Abort "Unexpected Error"
-	endif
-
-	ColorTabWave /= 257 // Plotly is 8-bit
-	if(reverseMode)
-		SortColumns/R keyWaves={ColorMappings}, sortWaves={ColorTabWave}
-		Sort/R ColorMappings, ColorMappings
-	else
-		SortColumns keyWaves={ColorMappings}, sortWaves={ColorTabWave}
-		Sort ColorMappings, ColorMappings
-	endif
-
-	// remove values outside of the range [0,1]
-	FindLevel/Q/P/EDGE=1 ColorMappings, 1
-	if(!V_flag)
-		DeletePoints/M=0 V_LevelX + 1, numColors - V_LevelX - 1, ColorMappings
-		DeletePoints/M=0 V_LevelX + 1, numColors - V_LevelX - 1, ColorTabWave
-		numColors = abs(V_LevelX - numColors)
-	endif
-
-	// write color scale member
-	out += "\"colorscale\":[\r"
-	numColors = DimSize(ColorTabWave, 0)
-	for(i = 0; i < numColors; i += 1)
-		out += "[" + dub2str(ColorMappings[i]) + ",\"rgb(" + dub2str(ColorTabWave[i][0]) + "," + dub2str(ColorTabWave[i][1]) + "," + dub2str(ColorTabWave[i][2]) + ")\"],\r"
-		// prevent plotly from interpolating by adding another color entry
-		if(discrete && (i < numcolors - 1))
-			out += "[" + dub2str(ColorMappings[i + 1]) + ",\"rgb(" + dub2str(ColorTabWave[i][0]) + "," + dub2str(ColorTabWave[i][1]) + "," + dub2str(ColorTabWave[i][2]) + ")\"],\r"
+	if(!!cmpstr(plotlymap, "_none_"))
+		out += "\"colorscale\": \"" + plotlymap + "\",\r"
+		if(reverseMode)
+			out += "\"reversescale\": true,\r"
 		endif
-	endfor
-	out = out[0, strlen(out) - 3]
-	out += "\r],\r"
+	else
+		if(DimSize(ColorMappings, 0) != DimSize(ColorTabWave, 0))
+			Abort "Unexpected Error"
+		endif
+	
+		ColorTabWave /= 257 // Plotly is 8-bit
+		if(reverseMode)
+			SortColumns/R keyWaves={ColorMappings}, sortWaves={ColorTabWave}
+			Sort/R ColorMappings, ColorMappings
+		else
+			SortColumns keyWaves={ColorMappings}, sortWaves={ColorTabWave}
+			Sort ColorMappings, ColorMappings
+		endif
+	
+		// remove values outside of the range [0,1]
+		FindLevel/Q/P/EDGE=1 ColorMappings, 1
+		if(!V_flag)
+			DeletePoints/M=0 V_LevelX + 1, numColors - V_LevelX - 1, ColorMappings
+			DeletePoints/M=0 V_LevelX + 1, numColors - V_LevelX - 1, ColorTabWave
+			numColors = abs(V_LevelX - numColors)
+		endif
+	
+		// write color scale member
+		out += "\"colorscale\":[\r"
+		numColors = DimSize(ColorTabWave, 0)
+		for(i = 0; i < numColors; i += 1)
+			out += "[" + dub2str(ColorMappings[i]) + ",\"rgb(" + dub2str(ColorTabWave[i][0]) + "," + dub2str(ColorTabWave[i][1]) + "," + dub2str(ColorTabWave[i][2]) + ")\"],\r"
+			// prevent plotly from interpolating by adding another color entry
+			if(discrete && (i < numcolors - 1))
+				out += "[" + dub2str(ColorMappings[i + 1]) + ",\"rgb(" + dub2str(ColorTabWave[i][0]) + "," + dub2str(ColorTabWave[i][1]) + "," + dub2str(ColorTabWave[i][2]) + ")\"],\r"
+			endif
+		endfor
+		out = out[0, strlen(out) - 3]
+		out += "\r],\r"
+	endif
 
 	WaveStats/Q zwave
 	variable zlo, zhi
@@ -1153,7 +1213,7 @@ static Function/T CreateContourObj(contour, graph)
 	obj += "\"type\":\"contour\",\r"
 	obj += "\"name\":\"" + contour + "\",\r"
 
-	// Check for colorbars and add them if present, in plotly they are part of the heatmap object------------------------------------------------------------------------------------------------------	
+	// Check for colorbars and add them if present, in plotly they are part of the heatmap object
 	string list = annotationlist(graph)
 	variable index=0
 	string AnnotationName

@@ -851,19 +851,13 @@ static Function/T CreateColorTab(info, zwave, color_mode)
 			Make/U/W/N=(2,3)/FREE ColorTabWave = {{65535,0},{65535,0},{65535,0}}
 			Make/N=2/FREE ColorMappings = {0, 255}
 			numColors = 2
-			zMin = NumberByKey("minRGB", info, "=")
-			zMax = NumberByKey("maxRGB", info, "=")
-			if(zMin == zMax) // @todo not sure how to handle this.
-				WaveStats/Q zwave
-				zMin = V_min
-				zMax = V_max
-			endif
 			// eval={value, red, green, blue [, alpha]}
 			do
 				evalStr = StringByKey("eval", info, "=")
 				if(!cmpstr(evalStr, ""))
 					break
 				endif
+				info = RemoveByKey("eval", info, "=")
 				evalStr = evalStr[1, strlen(evalStr) - 2] // remove {}
 				value = str2num(StringFromList(0, evalStr, ","))
 				rgbR  = str2num(StringFromList(1, evalStr, ","))
@@ -883,8 +877,10 @@ static Function/T CreateColorTab(info, zwave, color_mode)
 					ColorTabWave[V_Value][1] = rgbG
 					ColorTabWave[V_Value][2] = rgbB
 				endif
-				info = RemoveByKey("eval", info, "=")
 			while(1)
+			WaveStats/Q colorMappings
+			zMin = V_min
+			zMax = V_max
 			colorMappings -= zMin
 			colorMappings /= zMax
 			break

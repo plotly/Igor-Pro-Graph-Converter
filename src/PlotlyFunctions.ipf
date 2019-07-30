@@ -2742,10 +2742,12 @@ static Function/T CreateColorScaleObj(Name, graph, trace)
 	string info = annotationinfo(graph, name, 1)
 	string Type = StringByKey("TYPE", info, ":", ";", 1)
 	string obj = ""
-	string Flags = StringByKey("FLAGS", info, ":", ";", 1)
-	string anchorCode, backCode, dflag, TxtColor, Rotation, exterior, Xpos, Ypos
+	string flags = StringByKey("FLAGS", info, ":", ";", 1)
+	string anchorCode, backCode, dflag, TxtColor, Rotation
+	variable exterior
+	variable Xpos, Ypos
 	variable BarWidth, frame
-	variable absX, absY, fracx, fracy
+	variable fracx, fracy
 	int rgbR, rgbG, rgbB, rgbA
 
 	// Look up the size of the graph window, in points
@@ -2772,25 +2774,33 @@ static Function/T CreateColorScaleObj(Name, graph, trace)
 		return ""
 	endif
 	obj += "\"colorbar\": {\r"
-	anchorcode = StringByKey("A", flags, "=", "/", 1)
-	backCode = StringByKey("B", flags, "=", "/", 1)
-	dflag = StringByKey("D", flags, "=", "/", 1)
-	exterior = StringByKey("E", flags, "=", "/", 1)
-	frame = str2num(StringByKey("F", flags, "=", "/", 1))
-	txtColor = "txtcolor(x)="+StringByKey("G", flags, "=", "/", 1) // prepend a string used to search in the standard way
 
-	xPos = StringByKey("X", flags, "=", "/", 1)
-	yPos = StringByKey("Y", flags, "=", "/", 1)
-	absx = str2num(StringByKey("ABSX", info, ":", ";", 1))
-	absy = str2num(StringByKey("ABSY", info, ":", ";", 1))
-	fracx = (absx - p_left) / (p_right - p_left)
+	// position
+	anchorcode = StringByKey("A", flags, "=", "/", 1)
+	exterior = str2num(StringByKey("E", flags, "=", "/", 1)) /// @todo
+
+	xPos = NumberByKey("X", flags, "=", "/", 1)
+	yPos = NumberByKey("Y", flags, "=", "/", 1)
+
+	fracy = yPos / 100
+	if(strsearch(anchorcode, "C", 0) > -1)
+		fracy *= -1
+	endif
+	fracx = xPos / 100
+	if(strsearch(anchorcode, "R", 0) > -1)
+		fracx = 1 - fracx
+	endif
+	if(strsearch(anchorcode, "M", 0) > -1)
+		fracx += 0.5
+	endif
+
 	fracx = max(-2, min(3, fracx))
-	fracy = (absy - p_bottom) / (p_top - p_bottom)
-	fracy = max(-2, min(3, fracx))
+	fracy = max(-2, min(3, fracy))
 	obj += "\"x\":" + dub2str(fracx) + ",\r"
 	obj += "\"y\":" + dub2str(fracy) + ",\r"
 	obj += AnchorText(anchorcode)
 
+	// height + width
 	string csinfo = StringByKey("COLORSCALE", info, ":", ";", 1)
 	variable width = str2num(StringByKey("width", csinfo, "=", ",", 1))
 	variable widthpct = str2num(StringByKey("widthPct", csinfo, "=", ",", 1)) / 100
@@ -2818,18 +2828,21 @@ static Function/T CreateColorScaleObj(Name, graph, trace)
 		obj += "\"lenmode\":\"fraction\",\r"
 	endif
 
+	frame = str2num(StringByKey("F", flags, "=", "/", 1))
+	dflag = StringByKey("D", flags, "=", "/", 1)
 	if(frame == 2) // Draw a border
 		if(strsearch(dflag, "{", 0) > -1) // fancy flag: take just thefirst number, the actual borderwidth
 			dflag = "dflag(x)=" + dflag
 			dflag = dub2str(GetNumFromModifyStr(dflag, "dflag", "{", 0))
 		endif
 	elseif(frame == 0) // Don't draw a border
-		dflag="0"
+		dflag = "0"
 	endif
 
 	obj += "\"borderwidth\":" + dflag + ",\r"
 	string framesize = StringByKey("frame", info, "=", ",")
 	obj += "\"outlinewidth\":" + framesize + ",\r"
+	backCode = StringByKey("B", flags, "=", "/", 1)
 	if(StringMatch(backCode[0], "(")) // The background code is a color
 		backCode = "bgcolor(x)=" + backCode // Add a key for the standard format for the key searcher
 		rgbR = round(GetNumFromModifyStr(backCode, "bgcolor", "(", 0) / 257)
@@ -2848,7 +2861,7 @@ static Function/T CreateColorScaleObj(Name, graph, trace)
 	variable defaultTextSizePT = GetDefaultFontSize(graph, "") // This number is returned in POINTS
 
 	// Axis Label/Title
-
+	txtColor = "txtcolor(x)="+StringByKey("G", flags, "=", "/", 1) // prepend a string used to search in the standard way
 	rgbR = round(GetNumFromModifyStr(txtcolor, "txtcolor", "(", 0) / 257)
 	rgbG = round(GetNumFromModifyStr(txtcolor, "txtcolor", "(", 1) / 257)
 	rgbB = round(GetNumFromModifyStr(txtcolor, "txtcolor", "(", 2) / 257)

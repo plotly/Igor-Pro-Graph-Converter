@@ -1,0 +1,8 @@
+default:
+  image:
+    name: ${CI_REGISTRY}/ukos-git/docker-igorpro
+
+test:
+  script:
+    - ln -rs src "/root/WaveMetrics/Igor Pro 8 User Files/User Procedures/plotly"
+    - igorpro tests/tests.pxp

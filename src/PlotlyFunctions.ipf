@@ -2161,7 +2161,7 @@ static Function/T createAxisObj(axisName, PlyAxisName, graph, Orient, AxisNum)
 			obj += "\"side\":\"top\",\r"
 			RorT = 1
 		endif
-		// Free axis calculations for Horizontal axes-----------------------------------------------------------------------------
+		// Free axis calculations for Horizontal axes
 		if(FreeIndex > -1) // this is a free axis if true
 			if(StringMatch(info[Freeindex , 11], "{")) 	// We have to read a number and an axis name
 				cma = strsearch(info, ",", freeindex + 11)
@@ -2250,7 +2250,14 @@ static Function/T createAxisObj(axisName, PlyAxisName, graph, Orient, AxisNum)
 					obj += "\"position\":" + dub2str(FreeFrac) + ",\r"
 				endif
 			endif
-		endif // Not a free axis, so do nothing
+		else // Not a free axis
+			/// @todo not sure how to force the left axis to line up with the bottom axis it belongs to.
+			if(RorT)
+				obj += "\"position\":1,\r"
+			else
+				obj += "\"position\":0,\r"
+			endif
+		endif
 	endif
 
 	string defaultFnt = GetDefaultFont(graph)

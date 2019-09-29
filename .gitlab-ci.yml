@@ -5,8 +5,8 @@ default:
 test:
   script:
     - ln -rs src "/root/WaveMetrics/Igor Pro 8 User Files/User Procedures/plotly"
-    - igorpro tests/tests.pxp | tee igorpro.log
-    - if grep -e "^Plotly.*\.ipf.[0-9]\+.[0-9]\+.\serror." igorpro.log; then exit 1; fi
+    - igorpro tests/tests.pxp  2>error.log | tee igorpro.log
+    - if grep -e "^Plotly.*\.ipf.[0-9]\+.[0-9]\+.\serror." error.log; then exit 1; fi
   artifacts:
     paths:
-      - igorpro.log
+      - error.log

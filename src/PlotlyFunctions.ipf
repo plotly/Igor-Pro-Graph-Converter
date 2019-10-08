@@ -3481,22 +3481,37 @@ Function WriteOutput(str, filename, [appendTo])
 	string str, filename
 	variable appendTo
 
+	String path, filePath
 	variable refNum
 
 	appendTo = ParamIsDefault(appendTo) ? 0 : !!appendTo
+	filePath = ParseFilePath(1, filename, ":", 1, 0)
+	if(!cmpstr(filePath, ""))
+		path = "home"
+	else
+		path = "plotlyPath"
+		NewPath/C/O/Q $path, filePath
+		PathInfo $path
+		if(!V_flag)
+			Abort "Plotly: Could not create path"
+		endif
+	endif
+	filename = ParseFilePath(3, filename, ":", 1, 0) + ".json"
 
 	if(appendTo)
-		Open/A/Z/P=home refNum as filename
+		Open/A/Z/P=$path refNum as filename
 	else
-		Open/Z/P=home refNum as filename
+		Open/Z/P=$path refNum as filename
 	endif
 	if(!V_flag)
 		FBinWrite refNum, str
 		Close refNum
 	else
-		PathInfo home
+		PathInfo $path
 		printf "Error: Could not write to output file at %s\r", S_path + filename
 	endif
+
+	KillPath/Z $path
 End
 
 // takes a range in the form [*][2] and duplicates a wave to 1 dimension
